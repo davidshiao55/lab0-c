@@ -25,16 +25,34 @@ struct list_head *q_new()
 void q_free(struct list_head *l)
 {
     element_t *entry, *safe;
-    list_for_each_entry_safe (entry, safe, l, list) {
-        test_free(entry->value);
-        free(entry);
-    }
+    list_for_each_entry_safe (entry, safe, l, list)
+        q_release_element(entry);
     free(l);
+}
+
+/* Create new element */
+element_t *q_new_element(char *s)
+{
+    element_t *new_element = (element_t *) malloc(sizeof(element_t));
+    if (new_element) {
+        new_element->value = strdup(s);
+        if (!new_element->value) {
+            free(new_element);
+            new_element = NULL;
+        }
+    }
+    return new_element;
 }
 
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
+    if (!head)
+        return false;
+    element_t *new = q_new_element(s);
+    if (!new)
+        return false;
+    list_add(&new->list, head);
     return true;
 }
 
@@ -43,6 +61,7 @@ bool q_insert_tail(struct list_head *head, char *s)
 {
     return true;
 }
+
 
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
