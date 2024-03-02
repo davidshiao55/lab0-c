@@ -94,7 +94,15 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 /* Remove an element from tail of queue */
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
-    return NULL;
+    if (!head || list_empty(head))
+        return NULL;
+    element_t *removed_element = list_last_entry(head, element_t, list);
+    if (removed_element) {
+        if (sp)
+            q_copy_string(sp, removed_element->value, bufsize);
+        list_del(&removed_element->list);
+    }
+    return removed_element;
 }
 
 /* Return number of elements in queue */
