@@ -70,15 +70,6 @@ bool q_insert_tail(struct list_head *head, char *s)
     return true;
 }
 
-/* copy string from s to sp with limit bufsize */
-void q_copy_string(char *sp, const char *s, size_t bufsize)
-{
-    size_t i;
-    for (i = 0; i < bufsize - 1 && s[i]; i++)
-        sp[i] = s[i];
-    sp[i] = '\0';
-}
-
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
@@ -87,7 +78,7 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
     element_t *removed_element = list_first_entry(head, element_t, list);
     if (removed_element) {
         if (sp)
-            q_copy_string(sp, removed_element->value, bufsize);
+            strncpy(sp, removed_element->value, bufsize);
         list_del(&removed_element->list);
     }
     return removed_element;
@@ -101,7 +92,7 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
     element_t *removed_element = list_last_entry(head, element_t, list);
     if (removed_element) {
         if (sp)
-            q_copy_string(sp, removed_element->value, bufsize);
+            strncpy(sp, removed_element->value, bufsize);
         list_del(&removed_element->list);
     }
     return removed_element;
@@ -137,7 +128,25 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head)
+        return false;
+    struct list_head *prev = head;
+    element_t *entry, *safe;
+    list_for_each_entry_safe (entry, safe, head, list) {
+        if (&safe->list != head && !strcmp(entry->value, safe->value)) {
+            while (&safe->list != head && !strcmp(entry->value, safe->value)) {
+                list_del(&entry->list);
+                q_release_element(entry);
+                entry = safe;
+                safe = list_entry(safe->list.next, element_t, list);
+            }
+            prev->next = entry->list.next;
+            list_del(&entry->list);
+            q_release_element(entry);
+        } else {
+            prev = prev->next;
+        }
+    }
     return true;
 }
 
