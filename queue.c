@@ -195,9 +195,52 @@ void q_reverseK(struct list_head *head, int k)
         }
     }
 }
+/* merge two sorted queue */
+void q_merge_two_list(struct list_head *l_head,
+                      struct list_head *r_head,
+                      bool descend)
+{
+    LIST_HEAD(head);
+    element_t *l_entry, *l_safe, *r_entry, *r_safe;
+    for (l_entry = list_entry((l_head)->next, __typeof__(*l_entry), list),
+        l_safe = list_entry(l_entry->list.next, __typeof__(*l_entry), list),
+        r_entry = list_entry((r_head)->next, __typeof__(*r_entry), list),
+        r_safe = list_entry(r_entry->list.next, __typeof__(*r_entry), list);
+         &l_entry->list != (l_head) && &r_entry->list != (r_head);) {
+        if (strcmp(l_entry->value, r_entry->value) < 0) {
+            list_move_tail(&l_entry->list, &head);
+            l_entry = l_safe;
+            l_safe = list_entry(l_safe->list.next, __typeof__(*l_entry), list);
+        } else {
+            list_move_tail(&r_entry->list, &head);
+            r_entry = r_safe;
+            r_safe = list_entry(r_safe->list.next, __typeof__(*r_entry), list);
+        }
+    }
+
+    if (&l_entry->list != l_head) {
+        list_splice(l_head, r_head);
+    }
+    list_splice(&head, r_head);
+}
 
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+    struct list_head *slow = head->next;
+    for (struct list_head *fast = slow;
+         fast != head->prev && fast->next != head->prev;
+         fast = fast->next->next)
+        slow = slow->next;
+    LIST_HEAD(l_head);
+    list_cut_position(&l_head, head, slow);
+    q_sort(head, descend);
+    q_sort(&l_head, descend);
+    q_merge_two_list(&l_head, head, descend);
+}
+
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
