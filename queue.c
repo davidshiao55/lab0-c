@@ -207,7 +207,8 @@ void q_merge_two_list(struct list_head *l_head,
         r_entry = list_entry((r_head)->next, __typeof__(*r_entry), list),
         r_safe = list_entry(r_entry->list.next, __typeof__(*r_entry), list);
          &l_entry->list != (l_head) && &r_entry->list != (r_head);) {
-        if (strcmp(l_entry->value, r_entry->value) < 0) {
+        if ((strcmp(l_entry->value, r_entry->value) < 0 && !descend) ||
+            (strcmp(l_entry->value, r_entry->value) > 0 && descend)) {
             list_move_tail(&l_entry->list, &head);
             l_entry = l_safe;
             l_safe = list_entry(l_safe->list.next, __typeof__(*l_entry), list);
@@ -246,16 +247,38 @@ void q_sort(struct list_head *head, bool descend)
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    q_reverse(head);
+    element_t *prev = NULL, *entry, *safe;
+    list_for_each_entry_safe (entry, safe, head, list) {
+        if (prev && strcmp(prev->value, entry->value) <= 0) {
+            list_del(&entry->list);
+            q_release_element(entry);
+        }
+        prev = list_entry(safe->list.prev, element_t, list);
+    }
+    q_reverse(head);
+    return q_size(head);
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    q_reverse(head);
+    element_t *prev = NULL, *entry, *safe;
+    list_for_each_entry_safe (entry, safe, head, list) {
+        if (prev && strcmp(prev->value, entry->value) >= 0) {
+            list_del(&entry->list);
+            q_release_element(entry);
+        }
+        prev = list_entry(safe->list.prev, element_t, list);
+    }
+    q_reverse(head);
+    return q_size(head);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
