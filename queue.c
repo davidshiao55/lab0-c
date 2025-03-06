@@ -4,6 +4,10 @@
 
 #include "queue.h"
 
+#ifndef strlcpy
+#define strlcpy(dst, src, sz) snprintf((dst), (sz), "%s", (src))
+#endif
+
 /* Create an empty queue */
 struct list_head *q_new()
 {
@@ -30,14 +34,20 @@ void q_free(struct list_head *head)
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    if (!head)
+    if (!head || !s)
         return false;
 
     element_t *e = malloc(sizeof(element_t));
     if (!e)
         return false;
 
-    e->value = test_strdup(s);
+    size_t len = strlen(s) + 1;
+    e->value = malloc(len);
+    if (!e->value) {
+        free(e);
+        return false;
+    }
+    strlcpy(e->value, s, len);
     list_add(&e->list, head);
 
     return true;
@@ -46,15 +56,22 @@ bool q_insert_head(struct list_head *head, char *s)
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    if (!head)
+    if (!head || !s)
         return false;
 
     element_t *e = malloc(sizeof(element_t));
     if (!e)
         return false;
 
-    e->value = test_strdup(s);
+    size_t len = strlen(s) + 1;
+    e->value = malloc(len);
+    if (!e->value) {
+        free(e);
+        return false;
+    }
+    strlcpy(e->value, s, len);
     list_add_tail(&e->list, head);
+
     return true;
 }
 
