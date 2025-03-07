@@ -251,29 +251,21 @@ struct list_head *merge_two_sorted(struct list_head *left,
                                    struct list_head *right,
                                    bool descend)
 {
-    if (!left)
-        return right;
-    if (!right)
-        return left;
-    const element_t *l = list_entry(left, element_t, list);
-    const element_t *r = list_entry(right, element_t, list);
-    bool cmp = (descend) ? (strcmp(l->value, r->value) >= 0)
-                         : (strcmp(l->value, r->value) <= 0);
+    struct list_head *head = NULL, **ptr = &head, **node, *prev = NULL;
 
-    struct list_head *head = NULL;
-    if (cmp) {
-        head = left;
-        head->prev = NULL;
-        head->next = merge_two_sorted(left->next, right, descend);
-        if (head->next)
-            head->next->prev = head;
-    } else {
-        head = right;
-        head->prev = NULL;
-        head->next = merge_two_sorted(left, right->next, descend);
-        if (head->next)
-            head->next->prev = head;
+    for (node = NULL; left && right; *node = (*node)->next) {
+        const element_t *l = list_entry(left, element_t, list);
+        const element_t *r = list_entry(right, element_t, list);
+        bool cmp = (descend) ? (strcmp(l->value, r->value) >= 0)
+                             : (strcmp(l->value, r->value) <= 0);
+        node = (cmp) ? &left : &right;
+        *ptr = *node;
+        (*node)->prev = prev;
+        prev = *node;
+        ptr = &(*ptr)->next;
     }
+    *ptr = (struct list_head *) ((uintptr_t) left | (uintptr_t) right);
+    (*ptr)->prev = prev;
     return head;
 }
 
