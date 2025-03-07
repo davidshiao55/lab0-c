@@ -140,29 +140,31 @@ bool q_delete_dup(struct list_head *head)
     if (!head || list_empty(head))
         return false;
 
-    struct list_head *node;
-    list_for_each (node, head) {
+    struct list_head *node = head->next;
+
+    while (node != head) {
         element_t *e = list_entry(node, element_t, list);
         bool dup = false;
 
-        struct list_head *runner = node->next;
-        while (runner != head) {
-            struct list_head *next = runner->next;
-
-            element_t *r = list_entry(runner, element_t, list);
-            if (!strcmp(e->value, r->value)) {
+        struct list_head *safe = node->next;
+        // safe find the first non-duplicated value
+        while (safe != head) {
+            struct list_head *next = safe->next;
+            element_t *s = list_entry(safe, element_t, list);
+            if (!strcmp(s->value, e->value)) {
                 dup = true;
-                list_del(&r->list);
-                q_release_element(r);
+                list_del(&s->list);
+                q_release_element(s);
+            } else {
+                break;
             }
-            runner = next;
+            safe = next;
         }
         if (dup) {
-            struct list_head *next = node->next;
             list_del(&e->list);
             q_release_element(e);
-            node = next;
         }
+        node = safe;
     }
     return true;
 }
