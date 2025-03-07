@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -245,8 +246,83 @@ void q_reverseK(struct list_head *head, int k)
     }
 }
 
+/*  merges two sorted (non-circular) doubly linked lists */
+struct list_head *merge_two_sorted(struct list_head *left,
+                                   struct list_head *right,
+                                   bool descend)
+{
+    if (!left)
+        return right;
+    if (!right)
+        return left;
+    const element_t *l = list_entry(left, element_t, list);
+    const element_t *r = list_entry(right, element_t, list);
+    bool cmp = (descend) ? (strcmp(l->value, r->value) >= 0)
+                         : (strcmp(l->value, r->value) <= 0);
+
+    struct list_head *head = NULL;
+    if (cmp) {
+        head = left;
+        head->prev = NULL;
+        head->next = merge_two_sorted(left->next, right, descend);
+        if (head->next)
+            head->next->prev = head;
+    } else {
+        head = right;
+        head->prev = NULL;
+        head->next = merge_two_sorted(left, right->next, descend);
+        if (head->next)
+            head->next->prev = head;
+    }
+    return head;
+}
+
+/* A standard mergesort for a non-circular, doubly linked list */
+struct list_head *merge_sort_dlist(struct list_head *head, bool descend)
+{
+    if (!head || !head->next)
+        return head;
+    // offset fast pointer by 1 to find "first middle", work better for when
+    // list that only has 2 elements
+    struct list_head *slow = head, *fast = head->next;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+
+    struct list_head *mid = slow->next;
+    slow->next = NULL;
+    mid->prev = NULL;
+
+    struct list_head *left = merge_sort_dlist(head, descend);
+    struct list_head *right = merge_sort_dlist(mid, descend);
+
+    return merge_two_sorted(left, right, descend);
+}
+
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+    // Break the the list into normal doubly-linked list
+    struct list_head *first = head->next;
+    struct list_head *last = head->prev;
+    first->prev = NULL;
+    last->next = NULL;
+
+    struct list_head *sorted = merge_sort_dlist(first, descend);
+    struct list_head *tail = sorted;
+    while (tail->next)
+        tail = tail->next;
+
+    // Link the head back
+    head->next = sorted;
+    head->prev = tail;
+    sorted->prev = head;
+    tail->next = head;
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
