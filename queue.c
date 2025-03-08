@@ -9,6 +9,87 @@
 #define strlcpy(dst, src, sz) snprintf((dst), (sz), "%s", (src))
 #endif
 
+/*  merges two sorted (non-circular) doubly linked lists */
+static struct list_head *merge_two_sorted(struct list_head *left,
+                                          struct list_head *right,
+                                          bool descend)
+{
+    struct list_head *head = NULL, **ptr = &head, **node, *prev = NULL;
+
+    for (node = NULL; left && right; *node = (*node)->next) {
+        const element_t *l = list_entry(left, element_t, list);
+        const element_t *r = list_entry(right, element_t, list);
+        bool cmp = (descend) ? (strcmp(l->value, r->value) >= 0)
+                             : (strcmp(l->value, r->value) <= 0);
+        node = (cmp) ? &left : &right;
+        *ptr = *node;
+        (*node)->prev = prev;
+        prev = *node;
+        ptr = &(*ptr)->next;
+    }
+    *ptr = (struct list_head *) ((uintptr_t) left | (uintptr_t) right);
+    (*ptr)->prev = prev;
+    return head;
+}
+
+/* A standard mergesort for a non-circular, doubly linked list */
+static struct list_head *merge_sort_dlist(struct list_head *head, bool descend)
+{
+    if (!head || !head->next)
+        return head;
+    // offset fast pointer by 1 to find "first middle", work better for when
+    // list that only has 2 elements
+    struct list_head *slow = head, *fast = head->next;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+
+    struct list_head *mid = slow->next;
+    slow->next = NULL;
+    mid->prev = NULL;
+
+    struct list_head *left = merge_sort_dlist(head, descend);
+    struct list_head *right = merge_sort_dlist(mid, descend);
+
+    return merge_two_sorted(left, right, descend);
+}
+
+/*  Convert a circular list with sentinel head into a standard doubly linked
+ * list */
+static struct list_head *break_ring(struct list_head *head)
+{
+    if (!head)
+        return NULL;
+    else if (list_empty(head))
+        return NULL;
+
+    struct list_head *first = head->next;
+    struct list_head *last = head->prev;
+
+    first->prev = NULL;
+    last->next = NULL;
+
+    return first;
+}
+
+/* Re-circularize a standard doubly linked list under the sentinel head*/
+void recirc(struct list_head *head, struct list_head *first)
+{
+    if (!first) {
+        INIT_LIST_HEAD(head);
+        return;
+    }
+    struct list_head *tail = first;
+    while (tail->next)
+        tail = tail->next;
+
+    head->next = first;
+    first->prev = head;
+    head->prev = tail;
+    tail->next = head;
+}
+
 /* Create an empty queue */
 struct list_head *q_new()
 {
@@ -246,52 +327,6 @@ void q_reverseK(struct list_head *head, int k)
     }
 }
 
-/*  merges two sorted (non-circular) doubly linked lists */
-struct list_head *merge_two_sorted(struct list_head *left,
-                                   struct list_head *right,
-                                   bool descend)
-{
-    struct list_head *head = NULL, **ptr = &head, **node, *prev = NULL;
-
-    for (node = NULL; left && right; *node = (*node)->next) {
-        const element_t *l = list_entry(left, element_t, list);
-        const element_t *r = list_entry(right, element_t, list);
-        bool cmp = (descend) ? (strcmp(l->value, r->value) >= 0)
-                             : (strcmp(l->value, r->value) <= 0);
-        node = (cmp) ? &left : &right;
-        *ptr = *node;
-        (*node)->prev = prev;
-        prev = *node;
-        ptr = &(*ptr)->next;
-    }
-    *ptr = (struct list_head *) ((uintptr_t) left | (uintptr_t) right);
-    (*ptr)->prev = prev;
-    return head;
-}
-
-/* A standard mergesort for a non-circular, doubly linked list */
-struct list_head *merge_sort_dlist(struct list_head *head, bool descend)
-{
-    if (!head || !head->next)
-        return head;
-    // offset fast pointer by 1 to find "first middle", work better for when
-    // list that only has 2 elements
-    struct list_head *slow = head, *fast = head->next;
-    while (fast && fast->next) {
-        slow = slow->next;
-        fast = fast->next->next;
-    }
-
-    struct list_head *mid = slow->next;
-    slow->next = NULL;
-    mid->prev = NULL;
-
-    struct list_head *left = merge_sort_dlist(head, descend);
-    struct list_head *right = merge_sort_dlist(mid, descend);
-
-    return merge_two_sorted(left, right, descend);
-}
-
 /* Sort elements of queue in ascending/descending order */
 void q_sort(struct list_head *head, bool descend)
 {
@@ -360,41 +395,6 @@ int q_descend(struct list_head *head)
         }
     }
     return q_size(head);
-}
-
-/*  Convert a circular list with sentinel head into a standard doubly linked
- * list */
-struct list_head *break_ring(struct list_head *head)
-{
-    if (!head)
-        return NULL;
-    else if (list_empty(head))
-        return NULL;
-
-    struct list_head *first = head->next;
-    struct list_head *last = head->prev;
-
-    first->prev = NULL;
-    last->next = NULL;
-
-    return first;
-}
-
-/* Re-circularize a standard doubly linked list under the sentinel head*/
-void recirc(struct list_head *head, struct list_head *first)
-{
-    if (!first) {
-        INIT_LIST_HEAD(head);
-        return;
-    }
-    struct list_head *tail = first;
-    while (tail->next)
-        tail = tail->next;
-
-    head->next = first;
-    first->prev = head;
-    head->prev = tail;
-    tail->next = head;
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
