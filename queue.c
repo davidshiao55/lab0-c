@@ -362,10 +362,71 @@ int q_descend(struct list_head *head)
     return q_size(head);
 }
 
+/*  Convert a circular list with sentinel head into a standard doubly linked
+ * list */
+struct list_head *break_ring(struct list_head *head)
+{
+    if (!head)
+        return NULL;
+    else if (list_empty(head))
+        return NULL;
+
+    struct list_head *first = head->next;
+    struct list_head *last = head->prev;
+
+    first->prev = NULL;
+    last->next = NULL;
+
+    return first;
+}
+
+/* Re-circularize a standard doubly linked list under the sentinel head*/
+void recirc(struct list_head *head, struct list_head *first)
+{
+    if (!first) {
+        INIT_LIST_HEAD(head);
+        return;
+    }
+    struct list_head *tail = first;
+    while (tail->next)
+        tail = tail->next;
+
+    head->next = first;
+    first->prev = head;
+    head->prev = tail;
+    tail->next = head;
+}
+
 /* Merge all the queues into one sorted queue, which is in ascending/descending
  * order */
 int q_merge(struct list_head *head, bool descend)
 {
-    // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    else if (list_is_singular(head)) {
+        queue_contex_t *q = list_first_entry(head, queue_contex_t, chain);
+        return q->size;
+    }
+
+    struct list_head *first = head->next;
+    struct list_head *node = first->next;
+    queue_contex_t *f = list_entry(first, queue_contex_t, chain);
+
+    while (node != head) {
+        struct list_head *next = node->next;
+        queue_contex_t *n = list_entry(node, queue_contex_t, chain);
+        if (n->size == 0 || !n->q)
+            continue;
+
+        struct list_head *s1 = break_ring(f->q);
+        struct list_head *s2 = break_ring(n->q);
+        struct list_head *merged = merge_two_sorted(s1, s2, descend);
+        recirc(f->q, merged);
+        f->size += n->size;
+        n->size = 0;
+        INIT_LIST_HEAD(n->q);
+
+        node = next;
+    }
+    return f->size;
 }
