@@ -334,21 +334,10 @@ void q_sort(struct list_head *head, bool descend)
         return;
 
     // Break the the list into normal doubly-linked list
-    struct list_head *first = head->next;
-    struct list_head *last = head->prev;
-    first->prev = NULL;
-    last->next = NULL;
+    struct list_head *first = break_ring(head);
 
     struct list_head *sorted = merge_sort_dlist(first, descend);
-    struct list_head *tail = sorted;
-    while (tail->next)
-        tail = tail->next;
-
-    // Link the head back
-    head->next = sorted;
-    head->prev = tail;
-    sorted->prev = head;
-    tail->next = head;
+    recirc(head, sorted);
 }
 
 /* Remove every node which has a node with a strictly less value anywhere to
