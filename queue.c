@@ -419,3 +419,28 @@ int q_merge(struct list_head *head, bool descend)
     }
     return f->size;
 }
+
+/* Shuffle queue using Fisher–Yates shuffle algorithm */
+void q_shuffle(struct list_head *head)
+{
+    if (list_empty(head) || list_is_singular(head)) {
+        return;
+    }
+
+    int len = q_size(head);
+    struct list_head *tail = head->prev;
+
+    for (int i = len - 1; i > 0; i--) {
+        int r = rand() % (i + 1);
+
+        struct list_head *random_node = head->next;
+        for (int j = 0; j < r; j++) {
+            random_node = random_node->next;
+        }
+
+        if (random_node != tail) {
+            list_move(random_node, tail);
+        }
+        tail = tail->prev;
+    }
+}
